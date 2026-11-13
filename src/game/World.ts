@@ -3,20 +3,10 @@ import Phaser from 'phaser';
 export type WorldEvent = { type: string; name?: string; message?: string };
 
 type Person = {
-  name: string;
-  x: number;
-  y: number;
-  color: number;
-  job: string;
-  goal: string;
-  dialogue: string[];
-  sprite: Phaser.GameObjects.Container;
-  homeX: number;
-  homeY: number;
-  phase: number;
+  name: string; x: number; y: number; color: number; job: string; goal: string;
+  dialogue: string[]; sprite: Phaser.GameObjects.Container;
+  homeX: number; homeY: number; phase: number;
 };
-
-const streets = ['MG ROAD', 'KAVERI NAGAR', 'MARKET LANE', 'OLD BUS ROAD'];
 
 export class World extends Phaser.Scene {
   onEvent: (e: WorldEvent) => void = () => {};
@@ -28,7 +18,6 @@ export class World extends Phaser.Scene {
   speed = 0;
   clock = 0;
   cars: Phaser.GameObjects.Container[] = [];
-  roadSigns: Phaser.GameObjects.Text[] = [];
   prompt!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -44,7 +33,7 @@ export class World extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0x315547).fillRect(0, 0, W, H);
 
-    // City block grid: sidewalks, wide asphalt avenues, lanes and crossings.
+    // Wide roads, sidewalks, lane markings and crossings.
     const vRoads = [410, 1230, 2050], hRoads = [410, 1120, 1690];
 
     for (const x of vRoads) {
@@ -55,8 +44,10 @@ export class World extends Phaser.Scene {
       g.lineBetween(x - 95, 0, x - 95, H);
       g.lineBetween(x + 95, 0, x + 95, H);
       g.lineStyle(3, 0xd9bc71, .75);
+
       for (let y = 0; y < H; y += 68) g.lineBetween(x, y, x, y + 35);
-      for (const y of [410, 1120, 1690]) {
+
+      for (const y of hRoads) {
         for (let k = -5; k <= 5; k++)
           g.fillStyle(0xf0e7cc, .8).fillRect(x + k * 22 - 8, y - 135, 14, 70);
         g.fillStyle(0xe6b467).fillCircle(x - 144, y - 144, 8);
@@ -73,13 +64,14 @@ export class World extends Phaser.Scene {
       g.lineBetween(0, y + 82, W, y + 82);
       g.lineStyle(3, 0xd9bc71, .75);
       for (let x = 0; x < W; x += 68) g.lineBetween(x, y, x + 35, y);
-      for (const x of [410, 1230, 2050]) {
+
+      for (const x of vRoads) {
         for (let k = -5; k <= 5; k++)
           g.fillStyle(0xf0e7cc, .8).fillRect(x - 135, y + k * 22 - 8, 70, 14);
       }
     }
 
-    // Park paths and painted mural court.
+    // Neighbourhood park.
     g.fillStyle(0x607f59).fillRoundedRect(1290, 1175, 640, 410, 26);
     g.lineStyle(15, 0xbcae84, .8);
     g.strokeRoundedRect(1330, 1215, 560, 330, 35);
@@ -89,7 +81,7 @@ export class World extends Phaser.Scene {
     g.fillStyle(0x927650).fillRoundedRect(1458, 1370, 90, 25, 5);
     g.fillStyle(0x927650).fillRoundedRect(1680, 1260, 90, 25, 5);
 
-    // Detailed neighbourhood buildings.
+    // Shops, homes and civic buildings.
     const blocks = [
       [55, 55, 250, 260, '#c56e4e', 'NANDI TEA & TIFFIN'],
       [485, 52, 260, 270, '#738a6d', 'KAVERI ROOMS'],
@@ -115,7 +107,7 @@ export class World extends Phaser.Scene {
     for (const [x, y, w, h, col, label] of blocks)
       this.paintBuilding(g, x, y, w, h, col, label);
 
-    // Roadside stalls and greenery.
+    // Roadside market stalls and greenery.
     for (const [x, y] of [
       [355, 340], [765, 360], [1160, 540], [1645, 345], [1980, 520],
       [350, 1045], [780, 1060], [1170, 1450], [1980, 1540], [350, 1625],
@@ -138,7 +130,7 @@ export class World extends Phaser.Scene {
       backgroundColor: '#13211dcc', padding: { x: 10, y: 6 }
     }).setDepth(200).setScrollFactor(0);
 
-    // NPCs have distinct jobs, ambitions and dialogue.
+    // NPCs with different jobs, ambitions and dialogue.
     const peopleData = [
       ['Meera', 375, 470, 0xf2b15f, 'tea stall owner', 'Keep her late-night stall afloat',
         ['The blue scooter? Ask Ravi before you touch it.', 'I keep the tea hot and the gossip hotter.']],
@@ -159,7 +151,7 @@ export class World extends Phaser.Scene {
     for (const [name, x, y, color, job, goal, dialogue] of peopleData)
       this.makePerson(name, x, y, color, job, goal, [...dialogue]);
 
-    // Parked rides and moving street traffic.
+    // Parked rides and moving traffic.
     this.car = this.makeVehicle(1470, 430, 0xf0aa47, false, 'SCOOTER');
     this.makeVehicle(1090, 670, 0xe5bf62, false, 'AUTO');
     this.makeVehicle(790, 930, 0x53a6bd, true, 'BUS');
@@ -309,11 +301,16 @@ export class World extends Phaser.Scene {
       this.driving = true;
       this.player.setPosition(v.x, v.y);
       this.onEvent({ type: 'drive', message: `You hopped on the ${v.getData('vehicle')}. Arrows/WASD to ride · E to hop off.` });
-    } else this.onEvent({ type: 'hint', message: 'No ride nearby. Walk up to the parked scooter or auto.' });
+    } else {
+      this.onEvent({ type: 'hint', message: 'No ride nearby. Walk up to the parked scooter or auto.' });
+    }
   }
 
   nearestVehicle(r: number) {
-    const vs = this.children.list.filter((o: any) => o.getData?.('vehicle') && !o.getData('traffic')) as Phaser.GameObjects.Container[];
+    const vs = this.children.list.filter((o: any) =>
+      o.getData?.('vehicle') && !o.getData('traffic')
+    ) as Phaser.GameObjects.Container[];
+
     return vs.sort((a, b) =>
       Phaser.Math.Distance.Between(this.player.x, this.player.y, a.x, a.y) -
       Phaser.Math.Distance.Between(this.player.x, this.player.y, b.x, b.y)
@@ -325,6 +322,7 @@ export class World extends Phaser.Scene {
       this.toggleVehicle();
       return;
     }
+
     const p = this.people.map(x => ({
       p: x, d: Phaser.Math.Distance.Between(this.player.x, this.player.y, x.sprite.x, x.sprite.y)
     })).sort((a, b) => a.d - b.d)[0];
@@ -334,14 +332,17 @@ export class World extends Phaser.Scene {
       this.onEvent({ type: 'npc', name: person.name, message: `${person.job} · Wants to ${person.goal}` });
       return;
     }
+
     if (this.nearestVehicle(82)) {
       this.toggleVehicle();
       return;
     }
+
     if (this.player.x > 820 && this.player.x < 1130 && this.player.y > 545 && this.player.y < 825) {
       this.onEvent({ type: 'shop', message: 'Sri Lakshmi Stores · Water ₹20 · snack ₹35' });
       return;
     }
+
     this.onEvent({ type: 'hint', message: 'Walk close to a person, shop, or parked ride and press E.' });
   }
 
@@ -375,4 +376,38 @@ export class World extends Phaser.Scene {
       if (dx || dy) this.player.setRotation(Math.atan2(dy, dx) + Math.PI / 2);
     } else {
       const steer = (k.A.isDown || k.LEFT.isDown ? -1 : 0) + (k.D.isDown || k.RIGHT.isDown ? 1 : 0);
-      if (k.W.isDown || k.UP.isDown) 
+      if (k.W.isDown || k.UP.isDown) this.speed = Math.min(240, this.speed + dt * .19);
+      else if (k.S.isDown || k.DOWN.isDown) this.speed = Math.max(-90, this.speed - dt * .25);
+      else this.speed *= .985;
+
+      this.car.rotation += steer * dt * .0025 * (.3 + Math.abs(this.speed) / 130);
+      const nx = this.car.x + Math.sin(this.car.rotation) * this.speed * dt / 1000;
+      const ny = this.car.y - Math.cos(this.car.rotation) * this.speed * dt / 1000;
+      this.car.x = Phaser.Math.Clamp(nx, 35, 2565);
+      this.car.y = Phaser.Math.Clamp(ny, 35, 1865);
+      this.player.setPosition(this.car.x, this.car.y);
+      body.setVelocity(0, 0);
+    }
+
+    const nearestPerson = this.people.map(p => ({
+      p, d: Phaser.Math.Distance.Between(this.player.x, this.player.y, p.sprite.x, p.sprite.y)
+    })).sort((a, b) => a.d - b.d)[0];
+    const ride = this.nearestVehicle(82);
+    let text = '';
+
+    if (this.driving) text = 'E  HOP OFF';
+    else if (nearestPerson && nearestPerson.d < 85)
+      text = `E  TALK TO ${nearestPerson.p.name.toUpperCase()}  ·  ${nearestPerson.p.job.toUpperCase()}`;
+    else if (ride) text = `E  RIDE THE ${ride.getData('vehicle')}`;
+    else if (this.player.x > 820 && this.player.x < 1130 && this.player.y > 545 && this.player.y < 825)
+      text = 'E  SHOP · WATER ₹20';
+
+    if (text) {
+      this.prompt.setText(text);
+      this.prompt.setPosition(this.scale.width / 2, this.scale.height - 54);
+      this.prompt.setVisible(true);
+    } else {
+      this.prompt.setVisible(false);
+    }
+  }
+}
